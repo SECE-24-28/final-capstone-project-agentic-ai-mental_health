@@ -33,7 +33,7 @@ async def main():
             sys.exit(1)
         
         # Initialize LLM
-        llm = ChatOllama(model="qwen2.5", temperature=0.3)
+        llm = ChatOllama(model="hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:latest", temperature=0.3)
         
         # Define the system message
         system_message = (
