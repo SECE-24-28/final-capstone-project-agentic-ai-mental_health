@@ -1,0 +1,11 @@
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-google-genai
+mcp
+fastmcp
+langchain-mcp-adapters
+faiss-cpu
+sentence-transformers
+uvicorn
+fastapi
+python-dotenv
