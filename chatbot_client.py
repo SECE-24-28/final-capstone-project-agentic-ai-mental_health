@@ -3,17 +3,13 @@ import sys
 import asyncio
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from dotenv import load_dotenv
 
 async def main():
     load_dotenv()
-
-    if "GOOGLE_API_KEY" not in os.environ:
-        print("Error: GOOGLE_API_KEY is not set in the environment or .env file.", file=sys.stderr)
-        sys.exit(1)
 
     print("Initializing Mental Health Chatbot...", flush=True)
     server_path = os.path.join(os.path.dirname(__file__), "rag_mcp_server.py")
@@ -36,8 +32,8 @@ async def main():
             print(f"Error fetching tools: {e}", file=sys.stderr)
             sys.exit(1)
         
-        # Initialize the LLM (Gemini 2.5 Pro or Gemini 1.5 Flash depending on availability, defaulting to gemini-2.5-flash for speed)
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
+        # Initialize LLM
+        llm = ChatOllama(model="qwen2.5", temperature=0.3)
         
         # Define the system message
         system_message = (

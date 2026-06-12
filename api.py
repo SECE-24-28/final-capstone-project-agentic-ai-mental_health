@@ -10,7 +10,7 @@ import asyncio
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
@@ -30,9 +30,6 @@ server_path = os.path.join(os.path.dirname(__file__), "rag_mcp_server.py")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global mcp_client, mcp_session_context, mcp_session, mcp_tools, llm, agent_executor
-    
-    if "GOOGLE_API_KEY" not in os.environ:
-        print("Warning: GOOGLE_API_KEY environment variable is not set. Please set it in a .env file.", file=sys.stderr)
         
     print("Initializing MCP Client...", flush=True)
     mcp_client = MultiServerMCPClient({
@@ -50,7 +47,7 @@ async def lifespan(app: FastAPI):
         print("MCP Tools loaded successfully.", flush=True)
         
         # Initialize LLM & Agent
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+        llm = ChatOllama(model="qwen2.5", temperature=0.3)
         system_message = (
             "You are an empathetic, compassionate, and professional mental health assistant. "
             "Your goal is to support the user, analyze their mental state based on their messages, "
@@ -85,9 +82,6 @@ class ChatRequest(BaseModel):
 async def chat_endpoint(request: ChatRequest):
     if not agent_executor:
         raise HTTPException(status_code=500, detail="Agent is not initialized. Check server logs.")
-    
-    if "GOOGLE_API_KEY" not in os.environ:
-        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY is not set on the server. Please add it to your .env file.")
         
     # Reconstruct history
     chat_history = []
@@ -108,8 +102,8 @@ async def chat_endpoint(request: ChatRequest):
         return {"response": output}
     except Exception as e:
         error_msg = str(e)
-        if "403" in error_msg or "PERMISSION_DENIED" in error_msg:
-            return {"response": "⚠️ **API Key Error:** Google's servers rejected the API Key. This happens when the key is disabled, expired, or the Google Cloud project is suspended. \n\n**To fix this:** Please generate a new key at [Google AI Studio](https://aistudio.google.com/app/apikey), paste it into your `.env` file, and restart the server!"}
+        if "connection refused" in error_msg.lower() or "connect" in error_msg.lower():
+            return {"response": "⚠️ **Ollama Error:** The local AI server could not be reached. Make sure you have installed [Ollama](https://ollama.com) and it is running in the background."}
             
         print(f"Error during chat: {e}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
