@@ -5,9 +5,12 @@ const suggestionsEl = document.getElementById('suggestions');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const sidebarHistory = document.getElementById('sidebar-history');
+const userSelect = document.getElementById('user-select');
+const userAvatar = document.getElementById('user-avatar');
 
 let chatHistory = [];
-let chatCount = 0;
+let currentChatId = null;
+let currentUser = localStorage.getItem('serenity_current_user') || 'User 1';
 
 // Auto-resize textarea
 userInput.addEventListener('input', () => {
@@ -83,12 +86,114 @@ function hideTyping() {
     if (el) el.remove();
 }
 
-function addToHistory(text) {
-    chatCount++;
-    const item = document.createElement('div');
-    item.className = 'history-item';
-    item.textContent = text.length > 30 ? text.substring(0, 30) + '...' : text;
-    sidebarHistory.prepend(item);
+// User state UI sync
+function updateUserUI() {
+    userSelect.value = currentUser;
+    if (currentUser === 'User 1') {
+        userAvatar.textContent = 'U1';
+        userAvatar.style.backgroundColor = '#5436da';
+    } else {
+        userAvatar.textContent = 'U2';
+        userAvatar.style.backgroundColor = '#da3654';
+    }
+}
+
+// Local Storage helpers
+function getChatsFromStorage() {
+    const chatsJson = localStorage.getItem('serenity_chats');
+    return chatsJson ? JSON.parse(chatsJson) : [];
+}
+
+function saveChatsToStorage(chats) {
+    localStorage.setItem('serenity_chats', JSON.stringify(chats));
+}
+
+function renderSidebarHistory() {
+    sidebarHistory.innerHTML = '';
+    const chats = getChatsFromStorage();
+    // Filter chats belonging to the active user (default older chats to User 1)
+    const filteredChats = chats.filter(chat => (chat.user || 'User 1') === currentUser);
+    
+    filteredChats.slice().reverse().forEach(chat => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        if (chat.id === currentChatId) {
+            item.classList.add('active');
+        }
+        item.dataset.id = chat.id;
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = chat.title;
+        item.appendChild(titleSpan);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'history-item-delete';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.title = 'Delete chat';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteChat(chat.id);
+        });
+        item.appendChild(deleteBtn);
+
+        item.addEventListener('click', () => {
+            loadChat(chat.id);
+        });
+
+        sidebarHistory.appendChild(item);
+    });
+}
+
+function loadChat(chatId) {
+    const chats = getChatsFromStorage();
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return;
+
+    currentChatId = chatId;
+    chatHistory = chat.messages || [];
+
+    chatMessages.innerHTML = '';
+    if (welcomeScreen) welcomeScreen.style.display = 'none';
+    if (suggestionsEl) suggestionsEl.style.display = 'none';
+
+    chatHistory.forEach(msg => {
+        chatMessages.appendChild(createMessageRow(msg.role, msg.content));
+    });
+
+    scrollToBottom();
+
+    // Highlight active chat
+    document.querySelectorAll('.history-item').forEach(el => {
+        if (el.dataset.id === chatId) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+}
+
+function deleteChat(chatId) {
+    let chats = getChatsFromStorage();
+    chats = chats.filter(c => c.id !== chatId);
+    saveChatsToStorage(chats);
+
+    if (currentChatId === chatId) {
+        startNewChat();
+    } else {
+        renderSidebarHistory();
+    }
+}
+
+function startNewChat() {
+    currentChatId = null;
+    chatHistory = [];
+    chatMessages.innerHTML = '';
+    if (welcomeScreen) welcomeScreen.style.display = 'flex';
+    if (suggestionsEl) suggestionsEl.style.display = 'flex';
+    userInput.value = '';
+    sendBtn.disabled = true;
+    document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+    renderSidebarHistory();
 }
 
 async function sendMessage() {
@@ -99,8 +204,21 @@ async function sendMessage() {
     if (welcomeScreen) welcomeScreen.style.display = 'none';
     if (suggestionsEl) suggestionsEl.style.display = 'none';
 
-    // Add to sidebar history
-    if (chatHistory.length === 0) addToHistory(text);
+    // If starting a new session, create it in storage
+    if (currentChatId === null) {
+        const chatId = Date.now().toString();
+        currentChatId = chatId;
+        const chatTitle = text.length > 30 ? text.substring(0, 30) + '...' : text;
+        const chats = getChatsFromStorage();
+        chats.push({
+            id: chatId,
+            title: chatTitle,
+            user: currentUser,
+            messages: []
+        });
+        saveChatsToStorage(chats);
+        renderSidebarHistory();
+    }
 
     chatMessages.appendChild(createMessageRow('user', text));
     userInput.value = '';
@@ -129,6 +247,14 @@ async function sendMessage() {
         chatHistory.push({ role: 'user', content: text });
         chatHistory.push({ role: 'assistant', content: data.response });
 
+        // Update localStorage
+        const chats = getChatsFromStorage();
+        const chatIndex = chats.findIndex(c => c.id === currentChatId);
+        if (chatIndex !== -1) {
+            chats[chatIndex].messages = chatHistory;
+            saveChatsToStorage(chats);
+        }
+
     } catch (err) {
         hideTyping();
         chatMessages.appendChild(createMessageRow('assistant',
@@ -147,15 +273,16 @@ function useSuggestion(btn) {
     sendMessage();
 }
 
-// New chat
-document.getElementById('new-chat-btn').addEventListener('click', () => {
-    chatHistory = [];
-    chatMessages.innerHTML = '';
-    if (welcomeScreen) welcomeScreen.style.display = 'flex';
-    if (suggestionsEl) suggestionsEl.style.display = 'flex';
-    userInput.value = '';
-    sendBtn.disabled = true;
+// User select listener
+userSelect.addEventListener('change', (e) => {
+    currentUser = e.target.value;
+    localStorage.setItem('serenity_current_user', currentUser);
+    updateUserUI();
+    startNewChat();
 });
+
+// New chat button listener
+document.getElementById('new-chat-btn').addEventListener('click', startNewChat);
 
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keydown', (e) => {
@@ -164,3 +291,7 @@ userInput.addEventListener('keydown', (e) => {
         sendMessage();
     }
 });
+
+// Initial load
+updateUserUI();
+renderSidebarHistory();

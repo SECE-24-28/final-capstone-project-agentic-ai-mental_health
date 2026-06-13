@@ -85,13 +85,51 @@ body {
 }
 
 .history-item {
-    padding: 8px 12px; font-size: 0.82rem;
-    color: var(--text-sec); border-radius: 8px;
-    cursor: pointer; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text-sec);
+    border-radius: 8px;
+    cursor: pointer;
     transition: background 0.12s;
+    position: relative;
+    gap: 8px;
 }
 .history-item:hover { background: var(--hover); }
+.history-item.active { background: var(--active); color: var(--text); }
+
+.history-item span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-item-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: color 0.1s, background-color 0.1s;
+}
+
+.history-item:hover .history-item-delete,
+.history-item.active .history-item-delete {
+    display: flex;
+}
+
+.history-item-delete:hover {
+    color: #ff4d4d;
+    background: rgba(255, 77, 77, 0.1);
+}
 
 .sidebar-bottom {
     padding: 12px;
@@ -104,6 +142,23 @@ body {
     cursor: pointer; transition: background 0.12s;
 }
 .sidebar-user:hover { background: var(--hover); }
+
+#user-select {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 0.84rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    flex: 1;
+    width: 100%;
+}
+
+#user-select option {
+    background-color: var(--sidebar-bg);
+    color: var(--text);
+}
 
 .user-avatar {
     width: 28px; height: 28px;
