@@ -1,3 +1,4 @@
+[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/s7J27iqd)
 # Serenity AI: Agentic Mental Health Assistant
 
 An empathetic, local, and fully private AI Mental Health Chatbot powered by LangChain, FastAPI, and local LLMs (Llama 3.2 / Qwen via Ollama). This application uses Retrieval-Augmented Generation (RAG) combined with the Model Context Protocol (MCP) to provide evidence-based mental health coping strategies and resources.
